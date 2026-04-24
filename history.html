@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LeaveFlow – Leave History</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0f14; --surface: #13161d; --card: #1a1e28; --border: #252a38;
+      --accent: #4fffb0; --accent2: #ff6b6b; --accent3: #ffd166; --accent4: #74b9ff;
+      --text: #e8eaf0; --muted: #6b7280;
+      --font-head: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; display: flex; }
+    .sidebar { width: 240px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 32px 0; position: fixed; top: 0; left: 0; bottom: 0; }
+    .sidebar-logo { padding: 0 24px 32px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .sidebar-logo span { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: var(--accent); }
+    .sidebar-logo p { font-size: 11px; color: var(--muted); margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
+    .nav-item:hover { color: var(--text); background: rgba(79,255,176,0.05); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(79,255,176,0.08); }
+    .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+    .nav-section { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; padding: 20px 24px 8px; }
+    .main { margin-left: 240px; flex: 1; padding: 40px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .topbar h1 { font-family: var(--font-head); font-size: 28px; font-weight: 800; }
+    .topbar h1 span { color: var(--accent); }
+
+    /* FILTERS */
+    .filters-bar {
+      display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .filter-select {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 8px 14px; font-family: var(--font-body); font-size: 13px;
+      outline: none; cursor: pointer;
+    }
+    .filter-select:focus { border-color: var(--accent); }
+    .search-input {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 8px 14px; font-family: var(--font-body); font-size: 13px;
+      outline: none; flex: 1; min-width: 200px;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+    .filter-btn {
+      background: var(--accent); color: #000; border: none; border-radius: 8px;
+      padding: 8px 16px; font-family: var(--font-body); font-size: 13px; font-weight: 600;
+      cursor: pointer; text-decoration: none; display: inline-block;
+    }
+
+    /* SUMMARY PILLS */
+    .summary-pills { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+    .pill {
+      padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s;
+    }
+    .pill.all { background: rgba(232,234,240,0.1); color: var(--text); border: 1px solid var(--border); }
+    .pill.all.active, .pill.all:hover { background: rgba(232,234,240,0.2); border-color: var(--text); }
+    .pill.pending { background: rgba(255,209,102,0.12); color: var(--accent3); border: 1px solid rgba(255,209,102,0.2); }
+    .pill.approved { background: rgba(79,255,176,0.1); color: var(--accent); border: 1px solid rgba(79,255,176,0.2); }
+    .pill.rejected { background: rgba(255,107,107,0.1); color: var(--accent2); border: 1px solid rgba(255,107,107,0.2); }
+
+    /* TABLE */
+    .table-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .table-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+    .table-title { font-family: var(--font-head); font-size: 16px; font-weight: 700; }
+    .record-count { font-size: 12px; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; padding: 14px 24px; font-size: 11px; color: var(--muted);
+      font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+      background: rgba(19,22,29,0.5); border-bottom: 1px solid var(--border);
+    }
+    tbody tr { transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody td { padding: 16px 24px; font-size: 14px; border-bottom: 1px solid rgba(37,42,56,0.5); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .emp-cell { display: flex; flex-direction: column; }
+    .emp-name { font-weight: 500; }
+    .emp-id { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-pending { background: rgba(255,209,102,0.15); color: var(--accent3); }
+    .status-approved { background: rgba(79,255,176,0.12); color: var(--accent); }
+    .status-rejected { background: rgba(255,107,107,0.12); color: var(--accent2); }
+
+    .type-tag { padding: 3px 10px; border-radius: 6px; font-size: 12px; background: rgba(116,185,255,0.1); color: var(--accent4); }
+
+    .action-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* PAGINATION */
+    .pagination { display: flex; gap: 8px; justify-content: center; padding: 20px; }
+    .page-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .page-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span>LeaveFlow</span>
+    <p>PAF-IAST · COMP-463</p>
+  </div>
+  <span class="nav-section">Main</span>
+  <a href="index.html" class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+  <a href="apply.html" class="nav-item"><span class="nav-icon">✏️</span><span>Apply Leave</span></a>
+  <a href="history.html" class="nav-item active"><span class="nav-icon">📋</span><span>Leave History</span></a>
+  <a href="admin.html" class="nav-item"><span class="nav-icon">🛡️</span><span>Admin Panel</span></a>
+  <span class="nav-section">Account</span>
+  <a href="#" class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></a>
+  <a href="#" class="nav-item"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <h1>Leave <span>History</span></h1>
+      <p style="color:var(--muted);font-size:14px;margin-top:4px">All leave requests and their current status</p>
+    </div>
+    <a href="apply.html" class="filter-btn">+ Apply Leave</a>
+  </div>
+
+  <div class="summary-pills">
+    <div class="pill all active">All Records — 87</div>
+    <div class="pill pending">⏳ Pending — 23</div>
+    <div class="pill approved">✅ Approved — 51</div>
+    <div class="pill rejected">❌ Rejected — 13</div>
+  </div>
+
+  <div class="filters-bar">
+    <input class="search-input" type="text" placeholder="🔍 Search by name or employee ID..." id="searchInput" oninput="filterTable()"/>
+    <select class="filter-select" id="filterType" onchange="filterTable()">
+      <option value="">All Types</option>
+      <option>Casual</option>
+      <option>Sick</option>
+      <option>Annual</option>
+    </select>
+    <select class="filter-select" id="filterStatus" onchange="filterTable()">
+      <option value="">All Status</option>
+      <option>Pending</option>
+      <option>Approved</option>
+      <option>Rejected</option>
+    </select>
+    <select class="filter-select">
+      <option>2025</option>
+      <option>2024</option>
+    </select>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title">Leave Records</span>
+      <span class="record-count" id="recordCount">Showing 15 records</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Leave Type</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Days</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="leaveTable">
+      </tbody>
+    </table>
+    <div class="pagination">
+      <button class="page-btn">‹</button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <button class="page-btn">›</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const leaveData = [
+  { name:'Ali Hassan', id:'EMP-001', dept:'Engineering', type:'Casual', from:'Apr 20, 2025', to:'Apr 22, 2025', days:3, status:'Approved' },
+  { name:'Sara Malik', id:'EMP-002', dept:'HR', type:'Sick', from:'Apr 18, 2025', to:'Apr 19, 2025', days:2, status:'Approved' },
+  { name:'Usman Qureshi', id:'EMP-003', dept:'Finance', type:'Annual', from:'Apr 25, 2025', to:'May 05, 2025', days:11, status:'Pending' },
+  { name:'Fatima Zahra', id:'EMP-004', dept:'IT', type:'Casual', from:'Apr 23, 2025', to:'Apr 23, 2025', days:1, status:'Pending' },
+  { name:'Bilal Ahmed', id:'EMP-005', dept:'Marketing', type:'Sick', from:'Apr 15, 2025', to:'Apr 16, 2025', days:2, status:'Rejected' },
+  { name:'Ayesha Khan', id:'EMP-006', dept:'Operations', type:'Annual', from:'May 01, 2025', to:'May 10, 2025', days:10, status:'Pending' },
+  { name:'Hamza Tariq', id:'EMP-007', dept:'Engineering', type:'Casual', from:'Apr 10, 2025', to:'Apr 11, 2025', days:2, status:'Approved' },
+  { name:'Nadia Hussain', id:'EMP-008', dept:'Administration', type:'Sick', from:'Apr 05, 2025', to:'Apr 07, 2025', days:3, status:'Approved' },
+  { name:'Zaid Mirza', id:'EMP-009', dept:'IT', type:'Casual', from:'Mar 28, 2025', to:'Mar 29, 2025', days:2, status:'Rejected' },
+  { name:'Hina Baig', id:'EMP-010', dept:'Finance', type:'Annual', from:'Apr 14, 2025', to:'Apr 18, 2025', days:5, status:'Approved' },
+  { name:'Kashif Raza', id:'EMP-011', dept:'Marketing', type:'Sick', from:'Apr 22, 2025', to:'Apr 24, 2025', days:3, status:'Pending' },
+  { name:'Sana Javed', id:'EMP-012', dept:'HR', type:'Casual', from:'Apr 28, 2025', to:'Apr 28, 2025', days:1, status:'Pending' },
+  { name:'Omer Farooq', id:'EMP-013', dept:'Engineering', type:'Annual', from:'May 12, 2025', to:'May 20, 2025', days:9, status:'Pending' },
+  { name:'Rabia Sheikh', id:'EMP-014', dept:'Operations', type:'Sick', from:'Apr 08, 2025', to:'Apr 09, 2025', days:2, status:'Approved' },
+  { name:'Asad Butt', id:'EMP-015', dept:'Administration', type:'Casual', from:'Apr 17, 2025', to:'Apr 17, 2025', days:1, status:'Rejected' },
+];
+
+function renderTable(data) {
+  const tbody = document.getElementById('leaveTable');
+  tbody.innerHTML = '';
+  document.getElementById('recordCount').textContent = `Showing ${data.length} records`;
+  data.forEach(r => {
+    const statusClass = 'status-' + r.status.toLowerCase();
+    tbody.innerHTML += `
+      <tr>
+        <td><div class="emp-cell"><span class="emp-name">${r.name}</span><span class="emp-id">${r.id}</span></div></td>
+        <td style="color:var(--muted)">${r.dept}</td>
+        <td><span class="type-tag">${r.type}</span></td>
+        <td style="font-size:13px">${r.from}</td>
+        <td style="font-size:13px">${r.to}</td>
+        <td style="font-family:var(--font-head);font-weight:700;color:var(--accent)">${r.days}</td>
+        <td><span class="status-badge ${statusClass}">${r.status}</span></td>
+        <td><button class="action-btn">View</button></td>
+      </tr>`;
+  });
+}
+
+function filterTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const type = document.getElementById('filterType').value;
+  const status = document.getElementById('filterStatus').value;
+  const filtered = leaveData.filter(r => {
+    const matchSearch = r.name.toLowerCase().includes(search) || r.id.toLowerCase().includes(search);
+    const matchType = !type || r.type === type;
+    const matchStatus = !status || r.status === status;
+    return matchSearch && matchType && matchStatus;
+  });
+  renderTable(filtered);
+}
+
+renderTable(leaveData);
+</script>
+</body>
+</html>

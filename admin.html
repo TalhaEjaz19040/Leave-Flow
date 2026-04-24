@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LeaveFlow – Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0f14; --surface: #13161d; --card: #1a1e28; --border: #252a38;
+      --accent: #4fffb0; --accent2: #ff6b6b; --accent3: #ffd166; --accent4: #74b9ff;
+      --text: #e8eaf0; --muted: #6b7280;
+      --font-head: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; display: flex; }
+    .sidebar { width: 240px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 32px 0; position: fixed; top: 0; left: 0; bottom: 0; }
+    .sidebar-logo { padding: 0 24px 32px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .sidebar-logo span { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: var(--accent); }
+    .sidebar-logo p { font-size: 11px; color: var(--muted); margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; }
+    .nav-item:hover { color: var(--text); background: rgba(79,255,176,0.05); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(79,255,176,0.08); }
+    .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+    .nav-section { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; padding: 20px 24px 8px; }
+    .main { margin-left: 240px; flex: 1; padding: 40px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+    .topbar h1 { font-family: var(--font-head); font-size: 28px; font-weight: 800; }
+    .topbar h1 span { color: var(--accent); }
+    .topbar p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+    /* TABS */
+    .tab-row { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 28px; width: fit-content; }
+    .tab-btn { padding: 10px 24px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-family: var(--font-body); font-size: 14px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+    .tab-btn.active { background: var(--card); color: var(--text); }
+    .tab-badge { background: var(--accent3); color: #000; border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+    .tab-badge.red { background: var(--accent2); }
+
+    /* PENDING CARDS */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+    .leave-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .leave-card:hover { border-color: rgba(79,255,176,0.3); transform: translateY(-2px); }
+    .leave-card.approved-card { border-color: rgba(79,255,176,0.3); opacity: 0.7; }
+    .leave-card.rejected-card { border-color: rgba(255,107,107,0.3); opacity: 0.7; }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .card-emp { display: flex; align-items: center; gap: 12px; }
+    .card-avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--accent4), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #000; flex-shrink: 0; }
+    .card-name { font-weight: 600; font-size: 15px; }
+    .card-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .card-type { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(116,185,255,0.12); color: var(--accent4); }
+
+    .card-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .detail-item { background: var(--surface); border-radius: 8px; padding: 10px 12px; }
+    .detail-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .detail-val { font-size: 14px; font-weight: 500; margin-top: 4px; }
+
+    .card-reason { font-size: 13px; color: var(--muted); background: var(--surface); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; line-height: 1.5; }
+
+    .card-actions { display: flex; gap: 10px; }
+    .btn-approve {
+      flex: 1; background: rgba(79,255,176,0.12); border: 1px solid rgba(79,255,176,0.3);
+      color: var(--accent); border-radius: 8px; padding: 10px;
+      font-family: var(--font-body); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-approve:hover { background: var(--accent); color: #000; }
+    .btn-reject {
+      flex: 1; background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3);
+      color: var(--accent2); border-radius: 8px; padding: 10px;
+      font-family: var(--font-body); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-reject:hover { background: var(--accent2); color: #fff; }
+    .btn-done { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 10px; font-family: var(--font-body); font-size: 13px; cursor: default; }
+
+    .status-overlay {
+      position: absolute; top: 16px; right: 16px;
+      font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+    }
+    .overlay-approved { background: rgba(79,255,176,0.15); color: var(--accent); }
+    .overlay-rejected { background: rgba(255,107,107,0.15); color: var(--accent2); }
+
+    /* TAB SECTIONS */
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+
+    /* HR APPROVAL TABLE */
+    .hr-table-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .hr-table-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .hr-table-title { font-family: var(--font-head); font-size: 16px; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { text-align: left; padding: 14px 24px; font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; background: rgba(19,22,29,0.5); border-bottom: 1px solid var(--border); }
+    tbody tr { transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody td { padding: 16px 24px; font-size: 14px; border-bottom: 1px solid rgba(37,42,56,0.5); vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-dept-approved { background: rgba(116,185,255,0.12); color: var(--accent4); }
+    .btn-hr-approve { background: rgba(79,255,176,0.12); border: 1px solid rgba(79,255,176,0.3); color: var(--accent); border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; margin-right: 6px; transition: all 0.2s; }
+    .btn-hr-approve:hover { background: var(--accent); color: #000; }
+    .btn-hr-reject { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: var(--accent2); border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-hr-reject:hover { background: var(--accent2); color: #fff; }
+    .done-text { color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span>LeaveFlow</span>
+    <p>PAF-IAST · COMP-463</p>
+  </div>
+  <span class="nav-section">Main</span>
+  <a href="index.html" class="nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+  <a href="apply.html" class="nav-item"><span class="nav-icon">✏️</span><span>Apply Leave</span></a>
+  <a href="history.html" class="nav-item"><span class="nav-icon">📋</span><span>Leave History</span></a>
+  <a href="admin.html" class="nav-item active"><span class="nav-icon">🛡️</span><span>Admin Panel</span></a>
+  <span class="nav-section">Account</span>
+  <a href="#" class="nav-item"><span class="nav-icon">👤</span><span>Profile</span></a>
+  <a href="#" class="nav-item"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <h1>Admin <span>Panel</span></h1>
+      <p>Manage and process leave approval requests</p>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:13px;color:var(--muted)">
+      🛡️ Logged in as: <strong style="color:var(--text)">HR Manager</strong>
+    </div>
+  </div>
+
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="switchTab('dept', this)">
+      🏢 Dept. Head Review <span class="tab-badge" id="deptCount">8</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('hr', this)">
+      👔 HR Final Approval <span class="tab-badge red" id="hrCount">5</span>
+    </button>
+  </div>
+
+  <!-- DEPT HEAD TAB -->
+  <div class="tab-section active" id="dept-tab">
+    <div class="cards-grid" id="deptCards"></div>
+  </div>
+
+  <!-- HR TAB -->
+  <div class="tab-section" id="hr-tab">
+    <div class="hr-table-card">
+      <div class="hr-table-header">
+        <span class="hr-table-title">Dept. Approved — Awaiting HR Confirmation</span>
+        <span style="font-size:12px;color:var(--muted)">Final decision required</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Dept</th>
+            <th>Type</th>
+            <th>Duration</th>
+            <th>Days</th>
+            <th>Dept. Status</th>
+            <th>HR Action</th>
+          </tr>
+        </thead>
+        <tbody id="hrTable"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const deptData = [
+  { name:'Usman Qureshi', id:'EMP-003', dept:'Finance', type:'Annual', from:'Apr 25', to:'May 05', days:11, reason:'Family vacation planned in advance. Request submitted two weeks prior.', initials:'UQ' },
+  { name:'Fatima Zahra', id:'EMP-004', dept:'IT', type:'Casual', from:'Apr 23', to:'Apr 23', days:1, reason:'Personal errand. Will be available by phone if needed.', initials:'FZ' },
+  { name:'Ayesha Khan', id:'EMP-006', dept:'Operations', type:'Annual', from:'May 01', to:'May 10', days:10, reason:'Pre-planned travel. Handover notes ready.', initials:'AK' },
+  { name:'Kashif Raza', id:'EMP-011', dept:'Marketing', type:'Sick', from:'Apr 22', to:'Apr 24', days:3, reason:'Doctor advised rest for flu recovery.', initials:'KR' },
+  { name:'Sana Javed', id:'EMP-012', dept:'HR', type:'Casual', from:'Apr 28', to:'Apr 28', days:1, reason:'Sibling\'s wedding ceremony attendance.', initials:'SJ' },
+  { name:'Omer Farooq', id:'EMP-013', dept:'Engineering', type:'Annual', from:'May 12', to:'May 20', days:9, reason:'International travel for personal reasons.', initials:'OF' },
+  { name:'Rabia Sheikh', id:'EMP-014', dept:'Operations', type:'Sick', from:'May 02', to:'May 03', days:2, reason:'Dental surgery recovery.', initials:'RS' },
+  { name:'Zubair Malik', id:'EMP-016', dept:'IT', type:'Casual', from:'Apr 30', to:'Apr 30', days:1, reason:'Child\'s school event.', initials:'ZM' },
+];
+
+const hrData = [
+  { name:'Ali Hassan', id:'EMP-001', dept:'Engineering', type:'Casual', from:'Apr 20', to:'Apr 22', days:3 },
+  { name:'Sara Malik', id:'EMP-002', dept:'HR', type:'Sick', from:'Apr 18', to:'Apr 19', days:2 },
+  { name:'Hamza Tariq', id:'EMP-007', dept:'Engineering', type:'Casual', from:'Apr 10', to:'Apr 11', days:2 },
+  { name:'Nadia Hussain', id:'EMP-008', dept:'Administration', type:'Sick', from:'Apr 05', to:'Apr 07', days:3 },
+  { name:'Hina Baig', id:'EMP-010', dept:'Finance', type:'Annual', from:'Apr 14', to:'Apr 18', days:5 },
+];
+
+let cardStates = {};
+let hrStates = {};
+
+function renderDeptCards() {
+  const container = document.getElementById('deptCards');
+  container.innerHTML = '';
+  let pendingCount = 0;
+  deptData.forEach((d, i) => {
+    const state = cardStates[i];
+    const isApproved = state === 'approved';
+    const isRejected = state === 'rejected';
+    if (!state) pendingCount++;
+    const cardClass = isApproved ? 'leave-card approved-card' : isRejected ? 'leave-card rejected-card' : 'leave-card';
+    container.innerHTML += `
+      <div class="${cardClass}" id="card-${i}">
+        ${isApproved ? '<div class="status-overlay overlay-approved">✅ Approved</div>' : ''}
+        ${isRejected ? '<div class="status-overlay overlay-rejected">❌ Rejected</div>' : ''}
+        <div class="card-top">
+          <div class="card-emp">
+            <div class="card-avatar">${d.initials}</div>
+            <div>
+              <div class="card-name">${d.name}</div>
+              <div class="card-meta">${d.id} · ${d.dept}</div>
+            </div>
+          </div>
+          <span class="card-type">${d.type}</span>
+        </div>
+        <div class="card-detail">
+          <div class="detail-item"><div class="detail-label">From</div><div class="detail-val">${d.from}</div></div>
+          <div class="detail-item"><div class="detail-label">To</div><div class="detail-val">${d.to}</div></div>
+          <div class="detail-item"><div class="detail-label">Duration</div><div class="detail-val" style="color:var(--accent);font-family:var(--font-head)">${d.days} days</div></div>
+          <div class="detail-item"><div class="detail-label">Stage</div><div class="detail-val" style="font-size:13px">Dept. Review</div></div>
+        </div>
+        <div class="card-reason">"${d.reason}"</div>
+        <div class="card-actions">
+          ${!state
+            ? `<button class="btn-approve" onclick="deptAction(${i},'approved')">✓ Approve</button><button class="btn-reject" onclick="deptAction(${i},'rejected')">✕ Reject</button>`
+            : `<div class="btn-done">${isApproved ? '✅ Approved — forwarded to HR' : '❌ Request Rejected'}</div>`
+          }
+        </div>
+      </div>`;
+  });
+  document.getElementById('deptCount').textContent = pendingCount;
+}
+
+function deptAction(i, action) {
+  cardStates[i] = action;
+  renderDeptCards();
+}
+
+function renderHRTable() {
+  const tbody = document.getElementById('hrTable');
+  tbody.innerHTML = '';
+  let pendingCount = 0;
+  hrData.forEach((r, i) => {
+    const state = hrStates[i];
+    if (!state) pendingCount++;
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${r.name}</strong><br><span style="font-size:11px;color:var(--muted)">${r.id}</span></td>
+        <td style="color:var(--muted)">${r.dept}</td>
+        <td><span style="background:rgba(116,185,255,0.1);color:var(--accent4);padding:3px 10px;border-radius:6px;font-size:12px">${r.type}</span></td>
+        <td style="font-size:13px">${r.from} – ${r.to}</td>
+        <td style="font-family:var(--font-head);font-weight:700;color:var(--accent)">${r.days}</td>
+        <td><span class="status-badge status-dept-approved">Dept. Approved</span></td>
+        <td>
+          ${!state
+            ? `<button class="btn-hr-approve" onclick="hrAction(${i},'approved')">✓ Confirm</button><button class="btn-hr-reject" onclick="hrAction(${i},'rejected')">✕ Reject</button>`
+            : `<span class="done-text">${state === 'approved' ? '✅ Final Approved' : '❌ Rejected by HR'}</span>`
+          }
+        </td>
+      </tr>`;
+  });
+  document.getElementById('hrCount').textContent = pendingCount;
+}
+
+function hrAction(i, action) {
+  hrStates[i] = action;
+  renderHRTable();
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(name + '-tab').classList.add('active');
+}
+
+renderDeptCards();
+renderHRTable();
+</script>
+</body>
+</html>
